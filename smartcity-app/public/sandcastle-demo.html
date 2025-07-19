@@ -21,9 +21,9 @@
         }
         
         .sidebar {
-            width: 300px;
+            width: 250px;
             background: #2d2d2d;
-            padding: 20px;
+            padding: 15px;
             overflow-y: auto;
             border-right: 1px solid #444;
         }
@@ -42,8 +42,8 @@
             background: #333;
             border: 1px solid #555;
             border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 12px;
+            margin-bottom: 12px;
         }
         
         .panel h3 {
@@ -54,12 +54,13 @@
         
         select, button {
             width: 100%;
-            padding: 8px;
-            margin: 5px 0;
+            padding: 6px;
+            margin: 4px 0;
             background: #444;
             border: 1px solid #666;
             color: white;
             border-radius: 3px;
+            font-size: 13px;
         }
         
         button:hover {
@@ -250,7 +251,7 @@
             }
         }
 
-        // Fly to neighborhood function - following Sandcastle pattern
+        // Fly to neighborhood function - improved camera controls
         function flyToNeighborhood(neighborhoodKey) {
             if (!viewer) {
                 console.error('Viewer not initialized');
@@ -263,17 +264,38 @@
             console.log(`Flying to ${neighborhood.name}`);
 
             try {
-                viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 1500.0),
+                // Use setView for more reliable camera positioning
+                viewer.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 2000.0),
                     orientation: {
                         heading: Cesium.Math.toRadians(0.0),
                         pitch: Cesium.Math.toRadians(-45.0),
                         roll: 0.0
-                    },
-                    duration: 3.0
+                    }
                 });
+                
+                // Then fly to for smooth animation
+                setTimeout(() => {
+                    viewer.camera.flyTo({
+                        destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 1500.0),
+                        orientation: {
+                            heading: Cesium.Math.toRadians(0.0),
+                            pitch: Cesium.Math.toRadians(-45.0),
+                            roll: 0.0
+                        },
+                        duration: 2.0
+                    });
+                }, 100);
             } catch (error) {
                 console.error('Error flying to neighborhood:', error);
+                // Fallback to simple setView
+                try {
+                    viewer.camera.setView({
+                        destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 1500.0)
+                    });
+                } catch (fallbackError) {
+                    console.error('Fallback camera movement failed:', fallbackError);
+                }
             }
         }
 
@@ -343,7 +365,7 @@
             }
         }
 
-        // Test camera movement - following Sandcastle pattern
+        // Test camera movement - improved reliability
         function testCamera() {
             if (!viewer) {
                 console.error('Viewer not initialized');
@@ -352,17 +374,38 @@
 
             console.log('Testing camera movement...');
             try {
-                viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 1000.0),
+                // Test with setView first for reliability
+                viewer.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 1500.0),
                     orientation: {
                         heading: Cesium.Math.toRadians(45.0),
                         pitch: Cesium.Math.toRadians(-45.0),
                         roll: 0.0
-                    },
-                    duration: 2.0
+                    }
                 });
+                
+                // Then fly to for smooth animation
+                setTimeout(() => {
+                    viewer.camera.flyTo({
+                        destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 1000.0),
+                        orientation: {
+                            heading: Cesium.Math.toRadians(45.0),
+                            pitch: Cesium.Math.toRadians(-45.0),
+                            roll: 0.0
+                        },
+                        duration: 2.0
+                    });
+                }, 100);
             } catch (error) {
                 console.error('Error testing camera:', error);
+                // Fallback
+                try {
+                    viewer.camera.setView({
+                        destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 1000.0)
+                    });
+                } catch (fallbackError) {
+                    console.error('Fallback test camera failed:', fallbackError);
+                }
             }
         }
 
