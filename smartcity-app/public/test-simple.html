@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Cesium Test</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        #cesiumContainer { width: 100%; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <script>
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5NjFjM2FkZC0zM2ZjLTRlNjgtOGE1My02ODcwMDBlM2M2MjQiLCJpZCI6MTkwODM4LCJpYXQiOjE3NTEzMTA3NDh9.WiwRYUZTufwygXTvc7lKO1cvetjtMknBdJUKWew5_qY';
+        
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+            terrain: false,
+            baseLayerPicker: false,
+            geocoder: false,
+            homeButton: false,
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false,
+            selectionIndicator: false,
+            infoBox: false
+        });
+        
+        console.log('Cesium test initialized');
+    </script>
+</body>
+</html> 

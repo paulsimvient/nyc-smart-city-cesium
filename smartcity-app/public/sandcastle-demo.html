@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Smart City - Cesium Demo</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: white;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: #2d2d2d;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #444;
+        }
+        
+        .main-content {
+            flex: 1;
+            position: relative;
+        }
+        
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .panel {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .panel h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        select, button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #444;
+            border: 1px solid #666;
+            color: white;
+            border-radius: 3px;
+        }
+        
+        button:hover {
+            background: #555;
+        }
+        
+        button:disabled {
+            background: #333;
+            color: #666;
+        }
+        
+        .analytics {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        
+        .analytics h4 {
+            margin: 0 0 8px 0;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 2px solid #444;
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="panel">
+                <h3>NYC Neighborhoods</h3>
+                <select id="neighborhoodSelect">
+                    <option value="">Select a neighborhood...</option>
+                    <option value="financial">Financial District</option>
+                    <option value="williamsburg">Williamsburg</option>
+                    <option value="lic">Long Island City</option>
+                    <option value="dumbo">DUMBO</option>
+                    <option value="chelsea">Chelsea</option>
+                    <option value="soho">SoHo</option>
+                    <option value="east-village">East Village</option>
+                    <option value="west-village">West Village</option>
+                    <option value="harlem">Harlem</option>
+                    <option value="astoria">Astoria</option>
+                    <option value="bushwick">Bushwick</option>
+                    <option value="red-hook">Red Hook</option>
+                    <option value="gowanus">Gowanus</option>
+                    <option value="sunset-park">Sunset Park</option>
+                </select>
+            </div>
+            
+            <div class="panel">
+                <h3>Controls</h3>
+                <button id="flyButton" disabled>Fly to Location</button>
+                <button id="placeSensorsButton" disabled>Place Sensors</button>
+                <button id="analyzeButton" disabled>AI Analysis</button>
+                <button id="testButton">Test Camera</button>
+            </div>
+            
+            <div class="panel">
+                <h3>Analytics</h3>
+                <div class="analytics">
+                    <div class="metric">
+                        <span>Sensors:</span>
+                        <span id="sensorCount">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Coverage:</span>
+                        <span id="coverage">0%</span>
+                    </div>
+                    <div class="metric">
+                        <span>Data Quality:</span>
+                        <span id="dataQuality">Good</span>
+                    </div>
+                    <div class="metric">
+                        <span>Response Time:</span>
+                        <span id="responseTime">2.3s</span>
+                    </div>
+                </div>
+                <div id="aiAnalysis" style="margin-top: 10px; font-size: 12px; color: #ccc;"></div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Processing...</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div id="cesiumContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // NYC Neighborhoods data
+        const neighborhoods = {
+            'financial': { name: 'Financial District', lat: 40.7075, lng: -74.0107 },
+            'williamsburg': { name: 'Williamsburg', lat: 40.7081, lng: -73.9571 },
+            'lic': { name: 'Long Island City', lat: 40.7447, lng: -73.9485 },
+            'dumbo': { name: 'DUMBO', lat: 40.7033, lng: -73.9871 },
+            'chelsea': { name: 'Chelsea', lat: 40.7465, lng: -74.0014 },
+            'soho': { name: 'SoHo', lat: 40.7243, lng: -74.0018 },
+            'east-village': { name: 'East Village', lat: 40.7265, lng: -73.9815 },
+            'west-village': { name: 'West Village', lat: 40.7358, lng: -74.0036 },
+            'harlem': { name: 'Harlem', lat: 40.8116, lng: -73.9465 },
+            'astoria': { name: 'Astoria', lat: 40.7644, lng: -73.9235 },
+            'bushwick': { name: 'Bushwick', lat: 40.6983, lng: -73.9207 },
+            'red-hook': { name: 'Red Hook', lat: 40.6754, lng: -74.0097 },
+            'gowanus': { name: 'Gowanus', lat: 40.6733, lng: -73.9903 },
+            'sunset-park': { name: 'Sunset Park', lat: 40.6455, lng: -74.0124 }
+        };
+
+        // Sample sensor data
+        const sensors = [
+            { name: 'Traffic-001', type: 'traffic', lat: 40.7075, lng: -74.0107 },
+            { name: 'Air-001', type: 'air-quality', lat: 40.7081, lng: -73.9571 },
+            { name: 'Energy-001', type: 'energy', lat: 40.7447, lng: -73.9485 },
+            { name: 'Water-001', type: 'water', lat: 40.7033, lng: -73.9871 },
+            { name: 'Lighting-001', type: 'lighting', lat: 40.7465, lng: -74.0014 },
+            { name: 'Traffic-002', type: 'traffic', lat: 40.7243, lng: -74.0018 },
+            { name: 'Air-002', type: 'air-quality', lat: 40.7265, lng: -73.9815 },
+            { name: 'Energy-002', type: 'energy', lat: 40.7358, lng: -74.0036 },
+            { name: 'Water-002', type: 'water', lat: 40.8116, lng: -73.9465 },
+            { name: 'Lighting-002', type: 'lighting', lat: 40.7644, lng: -73.9235 }
+        ];
+
+        let currentNeighborhood = null;
+        let currentSensors = [];
+        let viewer = null;
+
+        // Initialize Cesium Viewer - minimal Sandcastle style
+        function initCesium() {
+            try {
+                // Check if container exists
+                const container = document.getElementById('cesiumContainer');
+                if (!container) {
+                    console.error('Cesium container not found');
+                    return false;
+                }
+
+                Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5NjFjM2FkZC0zM2ZjLTRlNjgtOGE1My02ODcwMDBlM2M2MjQiLCJpZCI6MTkwODM4LCJpYXQiOjE3NTEzMTA3NDh9.WiwRYUZTufwygXTvc7lKO1cvetjtMknBdJUKWew5_qY';
+
+                // Minimal viewer creation - exactly like Sandcastle
+                viewer = new Cesium.Viewer("cesiumContainer");
+
+                // Set initial view to NYC
+                viewer.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 2000.0),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0.0),
+                        pitch: Cesium.Math.toRadians(-30.0),
+                        roll: 0.0
+                    }
+                });
+
+                console.log('Cesium viewer initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('Error initializing Cesium:', error);
+                return false;
+            }
+        }
+
+        // Fly to neighborhood function - following Sandcastle pattern
+        function flyToNeighborhood(neighborhoodKey) {
+            if (!viewer) {
+                console.error('Viewer not initialized');
+                return;
+            }
+
+            const neighborhood = neighborhoods[neighborhoodKey];
+            if (!neighborhood) return;
+
+            console.log(`Flying to ${neighborhood.name}`);
+
+            try {
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 1500.0),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0.0),
+                        pitch: Cesium.Math.toRadians(-45.0),
+                        roll: 0.0
+                    },
+                    duration: 3.0
+                });
+            } catch (error) {
+                console.error('Error flying to neighborhood:', error);
+            }
+        }
+
+        // Place sensors function
+        function placeSensors(neighborhoodKey) {
+            if (!viewer) {
+                console.error('Viewer not initialized');
+                return;
+            }
+
+            const neighborhood = neighborhoods[neighborhoodKey];
+            if (!neighborhood) return;
+
+            try {
+                viewer.entities.removeAll();
+
+                const nearbySensors = sensors.filter(sensor => {
+                    const distance = Math.sqrt(
+                        Math.pow(sensor.lat - neighborhood.lat, 2) + 
+                        Math.pow(sensor.lng - neighborhood.lng, 2)
+                    ) * 111;
+                    return distance <= 2;
+                });
+
+                console.log(`Placing ${nearbySensors.length} sensors near ${neighborhood.name}`);
+                
+                currentSensors = nearbySensors;
+                updateAnalytics();
+
+                nearbySensors.forEach(sensor => {
+                    const color = getSensorColor(sensor.type);
+                    viewer.entities.add({
+                        position: Cesium.Cartesian3.fromDegrees(sensor.lng, sensor.lat, 10),
+                        point: {
+                            pixelSize: 15,
+                            color: color,
+                            outlineColor: Cesium.Color.WHITE,
+                            outlineWidth: 2,
+                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                        },
+                        label: {
+                            text: sensor.name,
+                            font: '12pt sans-serif',
+                            fillColor: Cesium.Color.WHITE,
+                            outlineColor: Cesium.Color.BLACK,
+                            outlineWidth: 1,
+                            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                            pixelOffset: new Cesium.Cartesian2(0, -30),
+                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error placing sensors:', error);
+            }
+        }
+
+        // Get sensor color
+        function getSensorColor(type) {
+            switch(type) {
+                case 'traffic': return Cesium.Color.RED;
+                case 'air-quality': return Cesium.Color.YELLOW;
+                case 'energy': return Cesium.Color.GREEN;
+                case 'water': return Cesium.Color.CYAN;
+                case 'lighting': return Cesium.Color.MAGENTA;
+                default: return Cesium.Color.WHITE;
+            }
+        }
+
+        // Test camera movement - following Sandcastle pattern
+        function testCamera() {
+            if (!viewer) {
+                console.error('Viewer not initialized');
+                return;
+            }
+
+            console.log('Testing camera movement...');
+            try {
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.7128, 1000.0),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(45.0),
+                        pitch: Cesium.Math.toRadians(-45.0),
+                        roll: 0.0
+                    },
+                    duration: 2.0
+                });
+            } catch (error) {
+                console.error('Error testing camera:', error);
+            }
+        }
+
+        // Update analytics
+        function updateAnalytics() {
+            document.getElementById('sensorCount').textContent = currentSensors.length;
+            document.getElementById('coverage').textContent = `${Math.min(currentSensors.length * 15, 100)}%`;
+            document.getElementById('dataQuality').textContent = currentSensors.length > 0 ? 'Good' : 'N/A';
+            document.getElementById('responseTime').textContent = `${(Math.random() * 2 + 1).toFixed(1)}s`;
+        }
+
+        // Generate AI analysis
+        async function generateAIAnalysis() {
+            if (!currentNeighborhood) return;
+            
+            const neighborhood = neighborhoods[currentNeighborhood];
+            if (!neighborhood) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('aiAnalysis').textContent = '';
+
+            try {
+                const response = await fetch('http://localhost:3002/api/review', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        neighborhood: neighborhood.name,
+                        sensors: currentSensors
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById('aiAnalysis').textContent = data.analysis || 'Analysis complete';
+            } catch (error) {
+                console.error('Error generating AI analysis:', error);
+                document.getElementById('aiAnalysis').textContent = 'AI analysis failed. Check backend connection.';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('neighborhoodSelect').addEventListener('change', function(e) {
+                currentNeighborhood = e.target.value;
+                const hasSelection = !!currentNeighborhood;
+                
+                document.getElementById('flyButton').disabled = !hasSelection;
+                document.getElementById('placeSensorsButton').disabled = !hasSelection;
+                document.getElementById('analyzeButton').disabled = !hasSelection;
+            });
+
+            document.getElementById('flyButton').addEventListener('click', function() {
+                if (currentNeighborhood) {
+                    flyToNeighborhood(currentNeighborhood);
+                }
+            });
+
+            document.getElementById('placeSensorsButton').addEventListener('click', function() {
+                if (currentNeighborhood) {
+                    placeSensors(currentNeighborhood);
+                }
+            });
+
+            document.getElementById('analyzeButton').addEventListener('click', function() {
+                if (currentNeighborhood) {
+                    generateAIAnalysis();
+                }
+            });
+
+            document.getElementById('testButton').addEventListener('click', testCamera);
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', function() {
+            console.log('Window loaded, initializing...');
+            
+            // Wait a bit to ensure DOM is fully ready
+            setTimeout(function() {
+                // Initialize Cesium first
+                if (initCesium()) {
+                    setupEventListeners();
+                    updateAnalytics();
+                    console.log('Application initialized successfully');
+                } else {
+                    console.error('Failed to initialize Cesium');
+                }
+            }, 100);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (viewer) {
+                viewer.destroy();
+            }
+        });
+    </script>
+</body>
+</html> 
