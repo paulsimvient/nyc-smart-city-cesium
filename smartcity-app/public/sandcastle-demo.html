@@ -391,16 +391,25 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        neighborhood: neighborhood.name,
-                        sensors: currentSensors
+                        neighborhood: {
+                            name: neighborhood.name,
+                            characteristics: `${neighborhood.name} is a ${neighborhood.type || 'urban'} neighborhood in NYC with coordinates ${neighborhood.lat}, ${neighborhood.lng}`
+                        },
+                        sensorData: currentSensors
                     })
                 });
 
                 const data = await response.json();
-                document.getElementById('aiAnalysis').textContent = data.analysis || 'Analysis complete';
+                if (data.review) {
+                    document.getElementById('aiAnalysis').textContent = data.review;
+                } else if (data.error) {
+                    document.getElementById('aiAnalysis').textContent = `Error: ${data.error}`;
+                } else {
+                    document.getElementById('aiAnalysis').textContent = 'Analysis complete';
+                }
             } catch (error) {
                 console.error('Error generating AI analysis:', error);
-                document.getElementById('aiAnalysis').textContent = 'AI analysis failed. Check backend connection.';
+                document.getElementById('aiAnalysis').textContent = 'AI analysis failed. Check backend connection and OpenAI API key.';
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }

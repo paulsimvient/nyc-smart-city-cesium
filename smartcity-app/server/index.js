@@ -54,21 +54,26 @@ app.post('/api/review', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `You are a smart city planning expert. Analyze the given neighborhood and existing sensor data to provide specific recommendations for sensor placement and city improvements. Focus on practical, actionable advice that considers the neighborhood's characteristics, existing infrastructure, and potential for smart city enhancements.`
+          content: `You are a smart city planning expert. Provide concise, practical recommendations for sensor placement and city improvements. Focus on specific locations and actionable advice. Keep responses under 200 words.`
         },
         {
           role: 'user',
-          content: `Analyze the neighborhood "${neighborhood.name}" (${neighborhood.characteristics}) and provide specific sensor placement recommendations. Consider the existing sensors in the area and suggest where to place new sensors for maximum impact.`
+          content: `Analyze ${neighborhood.name} (${neighborhood.characteristics}). Current sensors: ${sensorData ? sensorData.length : 0}. Recommend 3-5 specific sensor placements with exact locations and reasoning.`
         }
       ],
-      max_tokens: 300,
+      max_tokens: 250,
+      temperature: 0.7,
     });
     
     const aiResponse = completion.choices[0].message.content;
     res.json({ review: aiResponse });
   } catch (err) {
     console.error('OpenAI API error:', err);
-    res.status(500).json({ error: 'Could not connect to AI service. Please check your backend server.' });
+    if (err.message.includes('API key')) {
+      res.status(500).json({ error: 'OpenAI API key not configured. Please add your API key to the .env file.' });
+    } else {
+      res.status(500).json({ error: 'AI service error: ' + err.message });
+    }
   }
 });
 
