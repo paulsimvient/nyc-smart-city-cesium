@@ -251,7 +251,7 @@
             }
         }
 
-        // Fly to neighborhood function - improved camera controls
+        // Fly to neighborhood function - improved camera controls with visual feedback
         function flyToNeighborhood(neighborhoodKey) {
             if (!viewer) {
                 console.error('Viewer not initialized');
@@ -261,9 +261,34 @@
             const neighborhood = neighborhoods[neighborhoodKey];
             if (!neighborhood) return;
 
-            console.log(`Flying to ${neighborhood.name}`);
+            console.log(`Flying to ${neighborhood.name} at ${neighborhood.lat}, ${neighborhood.lng}`);
 
             try {
+                // Clear any existing entities first
+                viewer.entities.removeAll();
+                
+                // Add a temporary marker at the destination
+                viewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 0),
+                    point: {
+                        pixelSize: 20,
+                        color: Cesium.Color.YELLOW,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                    },
+                    label: {
+                        text: neighborhood.name,
+                        font: '14pt sans-serif',
+                        fillColor: Cesium.Color.YELLOW,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        pixelOffset: new Cesium.Cartesian2(0, -40),
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                    }
+                });
+
                 // Use setView for more reliable camera positioning
                 viewer.camera.setView({
                     destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 2000.0),
@@ -277,15 +302,15 @@
                 // Then fly to for smooth animation
                 setTimeout(() => {
                     viewer.camera.flyTo({
-                        destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 1500.0),
+                        destination: Cesium.Cartesian3.fromDegrees(neighborhood.lng, neighborhood.lat, 800.0),
                         orientation: {
                             heading: Cesium.Math.toRadians(0.0),
                             pitch: Cesium.Math.toRadians(-45.0),
                             roll: 0.0
                         },
-                        duration: 2.0
+                        duration: 3.0
                     });
-                }, 100);
+                }, 200);
             } catch (error) {
                 console.error('Error flying to neighborhood:', error);
                 // Fallback to simple setView
@@ -310,7 +335,16 @@
             if (!neighborhood) return;
 
             try {
-                viewer.entities.removeAll();
+                // Clear existing sensors but keep the neighborhood marker
+                const entities = viewer.entities.values;
+                for (let i = entities.length - 1; i >= 0; i--) {
+                    const entity = entities[i];
+                    if (entity.point && entity.point.color && entity.point.color.equals(Cesium.Color.YELLOW)) {
+                        // Keep the yellow neighborhood marker
+                        continue;
+                    }
+                    viewer.entities.remove(entity);
+                }
 
                 const nearbySensors = sensors.filter(sensor => {
                     const distance = Math.sqrt(
@@ -467,6 +501,12 @@
                 document.getElementById('flyButton').disabled = !hasSelection;
                 document.getElementById('placeSensorsButton').disabled = !hasSelection;
                 document.getElementById('analyzeButton').disabled = !hasSelection;
+                
+                // Automatically fly to selected location
+                if (currentNeighborhood) {
+                    console.log(`Auto-flying to ${currentNeighborhood}`);
+                    flyToNeighborhood(currentNeighborhood);
+                }
             });
 
             document.getElementById('flyButton').addEventListener('click', function() {
